@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seattle To Know</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .weather-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .weather-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .weather-item .label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .weather-item .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .air-quality-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .air-quality-card {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .aqi-display {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 3px solid;
+        }
+
+        .aqi-display.green { border-color: #28a745; }
+        .aqi-display.yellow { border-color: #ffc107; }
+        .aqi-display.orange { border-color: #fd7e14; }
+        .aqi-display.red { border-color: #dc3545; }
+        .aqi-display.purple { border-color: #6f42c1; }
+
+        .aqi-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .aqi-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .pollutants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .pollutant-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .pollutant-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .pollutant-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .health-recommendations {
+            margin-top: 20px;
+        }
+
+        .health-recommendations h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .health-recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .health-recommendations li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #e7f3ff;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .advice-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .advice-list li {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+
+        .what-to-know-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .know-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            overflow: hidden;
+        }
+
+        .know-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            background: #e9ecef;
+            transition: background 0.2s;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .know-section-header:hover {
+            background: #dee2e6;
+        }
+
+        .know-more-btn {
+            font-size: 0.9rem;
+            transition: transform 0.3s;
+        }
+
+        .know-section-content {
+            padding: 15px;
+            background: white;
+        }
+
+        .know-section-content.show {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 16px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-section h3 {
+            color: #667eea;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .time-range-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .time-range-btn {
+            padding: 10px 20px;
+            border: 2px solid #764ba2;
+            background: white;
+            color: #764ba2;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .time-range-btn.active {
+            background: #764ba2;
+            color: white;
+        }
+
+        .food-list, .events-list, .activities-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .food-item, .event-card, .activity-card {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .food-item:hover, .event-card:hover, .activity-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .item-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .item-details {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .item-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .item-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .link-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            transition: background 0.3s;
+        }
+
+        .link-btn:hover {
+            background: #5568d3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .weather-overview {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .weather-overview h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .weather-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .weather-overview-item {
+            text-align: center;
+        }
+
+        .weather-overview-item .label {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .weather-overview-item .value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌧️ Seattle To Know</h1>
+            <p>Your daily guide to Seattle</p>
+        </div>
+
+        <div id="overview-section" class="card">
+            <div class="loading">Loading overview...</div>
+        </div>
+
+        <div class="card">
+            <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">What are you looking for today?</h2>
+            <div class="tabs">
+                <button class="tab-btn" data-tab="food">🍕 Food</button>
+                <button class="tab-btn" data-tab="events">🎉 Events</button>
+                <button class="tab-btn" data-tab="outdoor">🏃 Outdoor Activities</button>
+            </div>
+
+            <div id="food-tab" class="tab-content">
+                <div class="loading">Loading food options...</div>
+            </div>
+
+            <div id="events-tab" class="tab-content">
+                <div class="loading">Loading events...</div>
+            </div>
+
+            <div id="outdoor-tab" class="tab-content">
+                <div class="loading">Loading outdoor activities...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cachedWeather = null;
+        let cachedAirQuality = null;
+        let selectedEventType = null;
+        let selectedTimeRange = 'today';
+        let selectedArea = null;
+        let selectedCuisine = null;
+        let selectedPriceRange = null;
+        let selectedActivityType = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Update active tab button
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update active tab content
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                // Load tab content
+                if (tabName === 'food') {
+                    loadFood();
+                } else if (tabName === 'events') {
+                    loadEvents();
+                } else if (tabName === 'outdoor') {
+                    loadOutdoor();
+                }
+            });
+        });
+
+        // Load overview on page load
+        async function loadOverview() {
+            try {
+                const response = await fetch('/api/overview');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                cachedWeather = data.weather;
+                cachedAirQuality = data.air_quality;
+                
+                displayOverview(data);
+            } catch (error) {
+                document.getElementById('overview-section').innerHTML = `
+                    <div class="error">
+                        <strong>Error loading overview:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayOverview(data) {
+            const html = `
+                <h2 style="color: #667eea; margin-bottom: 20px;">📅 ${data.date} - ${data.city}</h2>
+                
+                <h3 style="color: #667eea; margin-bottom: 15px;">Weather</h3>
+                <div class="weather-card">
+                    <div class="weather-item">
+                        <div class="label">Temperature</div>
+                        <div class="value">${data.weather.temperature_c}°C</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">Feels Like</div>
+                        <div class="value">${data.weather.feels_like_c}°C</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">Condition</div>
+                        <div class="value">${data.weather.condition}</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">Wind Speed</div>
+                        <div class="value">${data.weather.wind_mph} mph</div>
+                    </div>
+                </div>
+
+                ${data.air_quality.health_recommendations && data.air_quality.health_recommendations.length > 0 ? `
+                    <div class="health-recommendations" style="margin-top: 20px;">
+                        <h4>💡 Health Recommendations</h4>
+                        <ul>
+                            ${data.air_quality.health_recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                ${data.weather_forecast ? `
+                    <div style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-left: 4px solid #667eea; border-radius: 8px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px; font-size: 1rem;">🌦️ Weather Forecast (Next 2-3 Hours)</h4>
+                        <div style="font-size: 0.95rem; margin-bottom: 10px; font-weight: 500;">
+                            ${data.weather_forecast.forecast}
+                        </div>
+                        ${data.weather_forecast.next_hours && data.weather_forecast.next_hours.length > 0 ? `
+                            <div style="display: grid; gap: 10px; margin-top: 10px;">
+                                ${data.weather_forecast.next_hours.map(hour => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border-radius: 6px;">
+                                        <div>
+                                            <strong>${hour.time}</strong>
+                                            <span style="color: #666; margin-left: 8px;">${hour.condition}</span>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-weight: 600; color: #667eea;">${hour.temperature_c}°C</div>
+                                            ${hour.will_rain ? `<div style="font-size: 0.8rem; color: #dc3545;">🌧️ ${hour.rain_probability}% rain</div>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+
+                <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 20px;">🌬️ Air Quality & Health</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="aqi-display ${data.air_quality.aqi_color}">
+                        <div class="aqi-label">Air Quality Index (US EPA)</div>
+                        <div class="aqi-value" style="color: ${getAQIColor(data.air_quality.aqi_color)}">${data.air_quality.aqi}</div>
+                        <div class="aqi-label" style="color: ${getAQIColor(data.air_quality.aqi_color)}">${data.air_quality.aqi_label}</div>
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">${data.air_quality.health_concern}</div>
+                        ${data.air_quality.dominant_pollutant ? `<div style="font-size: 0.75rem; color: #888; margin-top: 5px;">Primary: ${data.air_quality.dominant_pollutant}</div>` : ''}
+                    </div>
+                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px; font-size: 0.9rem;">📊 US EPA AQI Scale (0-500)</h4>
+                        <div style="display: grid; gap: 6px; font-size: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #28a745; border: 2px solid #28a745;"></div>
+                                <span><strong>0-50: Good</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #ffc107; border: 2px solid #ffc107;"></div>
+                                <span><strong>51-100: Moderate</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #fd7e14; border: 2px solid #fd7e14;"></div>
+                                <span><strong>101-150: Unhealthy for Sensitive Groups</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #dc3545; border: 2px solid #dc3545;"></div>
+                                <span><strong>151-200: Unhealthy</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #6f42c1; border: 2px solid #6f42c1;"></div>
+                                <span><strong>201-300: Very Unhealthy</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 16px; height: 16px; border-radius: 3px; background: #800020; border: 2px solid #800020;"></div>
+                                <span><strong>301-500: Hazardous</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 10px; font-size: 0.95rem;">Pollutants (μg/m³)</h4>
+                    <div class="pollutants-grid">
+                        <div class="pollutant-item">
+                            <div class="pollutant-label">PM2.5</div>
+                            <div class="pollutant-value">${data.air_quality.pollutants.pm2_5}</div>
+                        </div>
+                        <div class="pollutant-item">
+                            <div class="pollutant-label">PM10</div>
+                            <div class="pollutant-value">${data.air_quality.pollutants.pm10}</div>
+                        </div>
+                        <div class="pollutant-item">
+                            <div class="pollutant-label">NO₂</div>
+                            <div class="pollutant-value">${data.air_quality.pollutants.no2}</div>
+                        </div>
+                        <div class="pollutant-item">
+                            <div class="pollutant-label">O₃</div>
+                            <div class="pollutant-value">${data.air_quality.pollutants.o3}</div>
+                        </div>
+                        <div class="pollutant-item">
+                            <div class="pollutant-label">CO</div>
+                            <div class="pollutant-value">${data.air_quality.pollutants.co}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 20px;">What To Know Today</h3>
+                <div class="what-to-know-sections">
+                    ${data.what_to_know_today.traffic && data.what_to_know_today.traffic.length > 0 ? `
+                        <div class="know-section">
+                            <div class="know-section-header" onclick="toggleKnowSection('traffic')">
+                                <span>🚦 Traffic Updates (${data.what_to_know_today.traffic.length})</span>
+                                <span class="know-more-btn" id="traffic-toggle">▼</span>
+                            </div>
+                            <div class="know-section-content" id="traffic-content" style="display: none;">
+                                <ul class="advice-list">
+                                    ${data.what_to_know_today.traffic.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <a href="https://www.wsdot.com/traffic/seattle/default.aspx" target="_blank" class="link-btn" style="margin-top: 10px;">🔗 Know More - WSDOT Traffic</a>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${data.what_to_know_today.weather && data.what_to_know_today.weather.length > 0 ? `
+                        <div class="know-section">
+                            <div class="know-section-header" onclick="toggleKnowSection('weather')">
+                                <span>🌤️ Weather Updates (${data.what_to_know_today.weather.length})</span>
+                                <span class="know-more-btn" id="weather-toggle">▼</span>
+                            </div>
+                            <div class="know-section-content" id="weather-content" style="display: none;">
+                                <ul class="advice-list">
+                                    ${data.what_to_know_today.weather.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <a href="https://weather.com/weather/today/l/Seattle+WA" target="_blank" class="link-btn" style="margin-top: 10px;">🔗 Know More - Weather.com</a>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${data.what_to_know_today.air_quality && data.what_to_know_today.air_quality.length > 0 ? `
+                        <div class="know-section">
+                            <div class="know-section-header" onclick="toggleKnowSection('air_quality')">
+                                <span>🌬️ Air Quality Updates (${data.what_to_know_today.air_quality.length})</span>
+                                <span class="know-more-btn" id="air_quality-toggle">▼</span>
+                            </div>
+                            <div class="know-section-content" id="air_quality-content" style="display: none;">
+                                <ul class="advice-list">
+                                    ${data.what_to_know_today.air_quality.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <a href="https://www.airnow.gov/?city=Seattle&state=WA&country=USA" target="_blank" class="link-btn" style="margin-top: 10px;">🔗 Know More - AirNow</a>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            document.getElementById('overview-section').innerHTML = html;
+        }
+
+        function getAQIColor(color) {
+            const colors = {
+                'green': '#28a745',
+                'yellow': '#ffc107',
+                'orange': '#fd7e14',
+                'red': '#dc3545',
+                'purple': '#6f42c1',
+                'maroon': '#800020'
+            };
+            return colors[color] || '#667eea';
+        }
+
+        async function loadFood() {
+            const tab = document.getElementById('food-tab');
+            tab.innerHTML = '<div class="loading">Loading food options...</div>';
+            
+            try {
+                const params = new URLSearchParams();
+                if (selectedArea) params.append('area', selectedArea);
+                if (selectedCuisine) params.append('cuisine', selectedCuisine);
+                if (selectedPriceRange) params.append('price_range', selectedPriceRange);
+                
+                const response = await fetch(`/api/food?${params.toString()}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                displayFood(data);
+            } catch (error) {
+                tab.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function displayFood(data) {
+            const html = `
+                ${displayWeatherOverview(data.weather, data.air_quality)}
+                
+                <div class="filter-section">
+                    <h3>Filter by Area</h3>
+                    <div class="button-group">
+                        <button class="btn ${!selectedArea ? 'active' : ''}" data-area="all">All Areas</button>
+                        ${data.areas.map(area => `
+                            <button class="btn ${selectedArea === area ? 'active' : ''}" data-area="${area}">${area}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Filter by Cuisine</h3>
+                    <div class="button-group">
+                        <button class="btn ${!selectedCuisine ? 'active' : ''}" data-cuisine="all">All Cuisines</button>
+                        ${data.cuisines.map(cuisine => `
+                            <button class="btn ${selectedCuisine === cuisine ? 'active' : ''}" data-cuisine="${cuisine}">${cuisine}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Filter by Price Range</h3>
+                    <div class="button-group">
+                        <button class="btn ${!selectedPriceRange ? 'active' : ''}" data-price="all">All Prices</button>
+                        ${data.price_ranges.map(price => `
+                            <button class="btn ${selectedPriceRange === price ? 'active' : ''}" data-price="${price}">${price}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="food-list">
+                    ${data.food_joints.length > 0 ? data.food_joints.map(joint => `
+                        <div class="food-item">
+                            <div class="item-name">
+                                ${joint.name} 
+                                <span style="color: #28a745; font-weight: 600;">${joint.price_range}</span>
+                                ${joint.rating ? `<span style="color: #ffc107; font-size: 0.9rem; margin-left: 8px;">⭐ ${joint.rating.toFixed(1)}</span>` : ''}
+                            </div>
+                            <div class="item-details">
+                                <div class="item-detail">📍 ${joint.area}</div>
+                                <span class="item-type">${joint.cuisine}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">${joint.address}</div>
+                            <a href="${joint.google_maps_link}" target="_blank" class="link-btn">📍 Open in Google Maps</a>
+                        </div>
+                    `).join('') : `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🍽️</div>
+                            <p>No restaurants found for the selected filters.</p>
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            document.getElementById('food-tab').innerHTML = html;
+            
+            // Add event listeners for area buttons
+            document.querySelectorAll('#food-tab .btn[data-area]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#food-tab .btn[data-area]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedArea = btn.dataset.area === 'all' ? null : btn.dataset.area;
+                    loadFood();
+                });
+            });
+            
+            // Add event listeners for cuisine buttons
+            document.querySelectorAll('#food-tab .btn[data-cuisine]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#food-tab .btn[data-cuisine]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedCuisine = btn.dataset.cuisine === 'all' ? null : btn.dataset.cuisine;
+                    loadFood();
+                });
+            });
+            
+            // Add event listeners for price range buttons
+            document.querySelectorAll('#food-tab .btn[data-price]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#food-tab .btn[data-price]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedPriceRange = btn.dataset.price === 'all' ? null : btn.dataset.price;
+                    loadFood();
+                });
+            });
+        }
+
+        async function loadEvents() {
+            const tab = document.getElementById('events-tab');
+            tab.innerHTML = '<div class="loading">Loading events...</div>';
+            
+            try {
+                const params = new URLSearchParams();
+                if (selectedEventType) params.append('event_type', selectedEventType);
+                params.append('time_range', selectedTimeRange);
+                params.append('event_limit', '20');
+                
+                const response = await fetch(`/api/events?${params.toString()}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                displayEvents(data);
+            } catch (error) {
+                tab.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function displayEvents(data) {
+            const html = `
+                ${displayWeatherOverview(data.weather, data.air_quality)}
+                
+                <div class="time-range-toggle">
+                    <button class="time-range-btn ${selectedTimeRange === 'today' ? 'active' : ''}" data-range="today">Today</button>
+                    <button class="time-range-btn ${selectedTimeRange === 'week' ? 'active' : ''}" data-range="week">This Week</button>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Event Type</h3>
+                    <div class="button-group">
+                        <button class="btn ${!selectedEventType ? 'active' : ''}" data-type="all">All Events</button>
+                        <button class="btn ${selectedEventType === 'music' ? 'active' : ''}" data-type="music">🎵 Music</button>
+                        <button class="btn ${selectedEventType === 'food' ? 'active' : ''}" data-type="food">🍕 Food</button>
+                        <button class="btn ${selectedEventType === 'sports' ? 'active' : ''}" data-type="sports">⚽ Sports</button>
+                        <button class="btn ${selectedEventType === 'tech' ? 'active' : ''}" data-type="tech">💻 Tech</button>
+                        <button class="btn ${selectedEventType === 'arts' ? 'active' : ''}" data-type="arts">🎨 Arts</button>
+                        <button class="btn ${selectedEventType === 'business' ? 'active' : ''}" data-type="business">💼 Business</button>
+                        <button class="btn ${selectedEventType === 'comedy' ? 'active' : ''}" data-type="comedy">😂 Comedy</button>
+                    </div>
+                </div>
+
+                <div class="events-list">
+                    ${data.events.length > 0 ? data.events.map(event => `
+                        <div class="event-card">
+                            <div class="item-name">${event.name}</div>
+                            <div class="item-details">
+                                ${event.date ? `<div class="item-detail">📅 ${event.date}</div>` : ''}
+                                ${event.time ? `<div class="item-detail">🕐 ${event.time}</div>` : ''}
+                                ${event.area ? `<div class="item-detail">📍 ${event.area}</div>` : ''}
+                                ${event.type ? `<span class="item-type">${event.type}</span>` : ''}
+                            </div>
+                            ${event.url ? `<a href="${event.url}" target="_blank" class="link-btn" style="margin-top: 10px;">🔗 Know More</a>` : ''}
+                        </div>
+                    `).join('') : `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📅</div>
+                            <p>No events found for the selected filters.</p>
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            document.getElementById('events-tab').innerHTML = html;
+            
+            // Add event listeners
+            document.querySelectorAll('#events-tab .time-range-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#events-tab .time-range-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedTimeRange = btn.dataset.range;
+                    loadEvents();
+                });
+            });
+            
+            document.querySelectorAll('#events-tab .btn[data-type]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#events-tab .btn[data-type]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedEventType = btn.dataset.type === 'all' ? null : btn.dataset.type;
+                    loadEvents();
+                });
+            });
+        }
+
+        async function loadOutdoor() {
+            const tab = document.getElementById('outdoor-tab');
+            tab.innerHTML = '<div class="loading">Loading outdoor activities...</div>';
+            
+            try {
+                const params = new URLSearchParams();
+                if (selectedActivityType) params.append('activity_type', selectedActivityType);
+                
+                const response = await fetch(`/api/outdoor?${params.toString()}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                displayOutdoor(data);
+            } catch (error) {
+                tab.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function displayOutdoor(data) {
+            const html = `
+                ${displayWeatherOverview(data.weather, data.air_quality)}
+                
+                <div class="filter-section">
+                    <h3>Activity Type</h3>
+                    <div class="button-group">
+                        <button class="btn ${!selectedActivityType ? 'active' : ''}" data-activity="all">All Activities</button>
+                        ${data.activity_types.map(type => `
+                            <button class="btn ${selectedActivityType === type ? 'active' : ''}" data-activity="${type}">${type}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="activities-list">
+                    ${data.activities.map(activity => `
+                        <div class="activity-card">
+                            <div class="item-name">${activity.name}</div>
+                            <div class="item-details">
+                                <div class="item-detail">📍 ${activity.location}</div>
+                                <span class="item-type">${activity.type}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">${activity.address}</div>
+                            <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+                                ${activity.rules_link ? `<a href="${activity.rules_link}" target="_blank" class="link-btn">📖 Official Rules</a>` : ''}
+                                <a href="${activity.google_maps_link}" target="_blank" class="link-btn">📍 Google Maps</a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('outdoor-tab').innerHTML = html;
+            
+            // Add event listeners
+            document.querySelectorAll('#outdoor-tab .btn[data-activity]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#outdoor-tab .btn[data-activity]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedActivityType = btn.dataset.activity === 'all' ? null : btn.dataset.activity;
+                    loadOutdoor();
+                });
+            });
+        }
+
+        function displayWeatherOverview(weather, airQuality) {
+            if (!weather || !airQuality) return '';
+            
+            return `
+                <div class="weather-overview">
+                    <h4>Weather Overview</h4>
+                    <div class="weather-overview-grid">
+                        <div class="weather-overview-item">
+                            <div class="label">Temp</div>
+                            <div class="value">${weather.temperature_c}°C</div>
+                        </div>
+                        <div class="weather-overview-item">
+                            <div class="label">Condition</div>
+                            <div class="value">${weather.condition}</div>
+                        </div>
+                        <div class="weather-overview-item">
+                            <div class="label">Air Quality</div>
+                            <div class="value">${airQuality.aqi_label}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load overview on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadOverview();
+            // Set first tab as active and load it
+            document.querySelector('.tab-btn[data-tab="food"]').classList.add('active');
+            document.getElementById('food-tab').classList.add('active');
+            loadFood();
+        });
+        function toggleKnowSection(section) {
+            const content = document.getElementById(`${section}-content`);
+            const toggle = document.getElementById(`${section}-toggle`);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+    </script>
+</body>
+</html>

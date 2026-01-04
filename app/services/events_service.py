@@ -87,8 +87,8 @@ def _get_eventbrite_events(
         return []
     
     try:
-        # Eventbrite API endpoint for searching events
-        url = "https://www.eventbriteapi.com/v3/events/search/"
+        # Eventbrite API endpoint for searching events (removed trailing slash)
+        url = "https://www.eventbriteapi.com/v3/events/search"
         
         # Set default date range (today to tomorrow) if not provided
         if start_date is None:
@@ -96,11 +96,12 @@ def _get_eventbrite_events(
         if end_date is None:
             end_date = start_date + timedelta(days=1)
         
-        # Format dates for API
+        # Format dates for API (Eventbrite expects UTC or local time)
         start_datetime = datetime.combine(start_date, datetime.min.time())
         end_datetime = datetime.combine(end_date, datetime.max.time())
-        start_date_str = start_datetime.isoformat()
-        end_date_str = end_datetime.isoformat()
+        # Use UTC format for Eventbrite API
+        start_date_str = start_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+        end_date_str = end_datetime.strftime("%Y-%m-%dT%H:%M:%S")
         
         params = {
             "location.address": "Seattle, WA",
@@ -121,9 +122,21 @@ def _get_eventbrite_events(
         
         headers = {
             "Authorization": f"Bearer {EVENTBRITE_API_KEY}",
+            "Content-Type": "application/json",
         }
         
         response = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        # Better error handling
+        if response.status_code == 404:
+            print(f"Eventbrite API 404: Endpoint not found. URL: {url}")
+            print(f"Response: {response.text}")
+            return []
+        elif response.status_code == 401 or response.status_code == 403:
+            print(f"Eventbrite API authentication error ({response.status_code}): Check your API key")
+            print(f"Response: {response.text}")
+            return []
+        
         response.raise_for_status()
         data = response.json()
         
@@ -136,8 +149,8 @@ def _get_eventbrite_events(
         for event in events_to_process:
             # Parse start time and date
             start_time = event.get("start", {}).get("local", "")
-            time_str = ""
-            date_str = ""
+            time_str = None
+            date_str = None
             if start_time:
                 try:
                     dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -153,9 +166,14 @@ def _get_eventbrite_events(
                         time_str = f"{hour - 12} PM"
                     # Format date as "Jan 15, 2024"
                     date_str = dt.strftime("%b %d, %Y")
-                except:
-                    time_str = start_time[:5] if len(start_time) >= 5 else ""
-                    date_str = ""
+                except Exception as e:
+                    print(f"Error parsing Eventbrite date/time: {e}, start_time: {start_time}")
+                    # Try to extract time from string if possible
+                    if len(start_time) >= 5:
+                        time_str = start_time[11:16] if len(start_time) > 16 else start_time[:5]
+                    else:
+                        time_str = None
+                    date_str = None
             
             # Get venue/area
             venue = event.get("venue", {})
@@ -243,8 +261,8 @@ def _get_ticketmaster_events(
         for event in data.get("_embedded", {}).get("events", [])[:limit]:
             # Parse start time and date
             start_time = event.get("dates", {}).get("start", {}).get("localDateTime", "")
-            time_str = ""
-            date_str = ""
+            time_str = None
+            date_str = None
             if start_time:
                 try:
                     dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -259,9 +277,14 @@ def _get_ticketmaster_events(
                         time_str = f"{hour - 12} PM"
                     # Format date as "Jan 15, 2024"
                     date_str = dt.strftime("%b %d, %Y")
-                except:
-                    time_str = start_time[:5] if len(start_time) >= 5 else ""
-                    date_str = ""
+                except Exception as e:
+                    print(f"Error parsing Ticketmaster date/time: {e}, start_time: {start_time}")
+                    # Try to extract time from string if possible
+                    if len(start_time) >= 5:
+                        time_str = start_time[11:16] if len(start_time) > 16 else start_time[:5]
+                    else:
+                        time_str = None
+                    date_str = None
             
             # Get venue/area
             venue = event.get("_embedded", {}).get("venues", [{}])[0]
@@ -343,8 +366,8 @@ def _get_seatgeek_events(
         for event in data.get("events", [])[:limit]:
             # Parse start time and date
             start_time = event.get("datetime_local", "")
-            time_str = ""
-            date_str = ""
+            time_str = None
+            date_str = None
             if start_time:
                 try:
                     dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -359,9 +382,14 @@ def _get_seatgeek_events(
                         time_str = f"{hour - 12} PM"
                     # Format date as "Jan 15, 2024"
                     date_str = dt.strftime("%b %d, %Y")
-                except:
-                    time_str = start_time[:5] if len(start_time) >= 5 else ""
-                    date_str = ""
+                except Exception as e:
+                    print(f"Error parsing SeatGeek date/time: {e}, start_time: {start_time}")
+                    # Try to extract time from string if possible
+                    if len(start_time) >= 5:
+                        time_str = start_time[11:16] if len(start_time) > 16 else start_time[:5]
+                    else:
+                        time_str = None
+                    date_str = None
             
             # Get venue/area
             venue = event.get("venue", {})

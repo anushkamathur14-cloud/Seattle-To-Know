@@ -881,8 +881,8 @@
                         <div class="event-card">
                             <div class="item-name">${event.name}</div>
                             <div class="item-details">
-                                ${event.date ? `<div class="item-detail">📅 ${event.date}</div>` : ''}
-                                ${event.time ? `<div class="item-detail">🕐 ${event.time}</div>` : ''}
+                                ${event.date && event.date.trim && event.date.trim() ? `<div class="item-detail">📅 ${event.date}</div>` : ''}
+                                ${event.time && event.time.trim && event.time.trim() ? `<div class="item-detail">🕐 ${event.time}</div>` : ''}
                                 ${event.area ? `<div class="item-detail">📍 ${event.area}</div>` : ''}
                                 ${event.type ? `<span class="item-type">${event.type}</span>` : ''}
                             </div>

@@ -47,17 +47,24 @@ def get_seattle_events(
     
     # Try Eventbrite first
     eventbrite_events = _get_eventbrite_events(event_type, start_date, end_date, limit)
+    print(f"Eventbrite returned {len(eventbrite_events)} events")
     all_events.extend(eventbrite_events)
     
     # Try Ticketmaster if API key is available
     if TICKETMASTER_API_KEY:
         ticketmaster_events = _get_ticketmaster_events(event_type, start_date, end_date, limit)
+        print(f"Ticketmaster returned {len(ticketmaster_events)} events")
         all_events.extend(ticketmaster_events)
+    else:
+        print("Ticketmaster API key not set - skipping Ticketmaster")
     
     # Try SeatGeek if API keys are available
     if SEATGEEK_CLIENT_ID and SEATGEEK_CLIENT_SECRET:
         seatgeek_events = _get_seatgeek_events(event_type, start_date, end_date, limit)
+        print(f"SeatGeek returned {len(seatgeek_events)} events")
         all_events.extend(seatgeek_events)
+    else:
+        print("SeatGeek API keys not set - skipping SeatGeek")
     
     # Remove duplicates and sort by time
     unique_events = _deduplicate_events(all_events)
@@ -259,13 +266,33 @@ def _get_ticketmaster_events(
         
         events = []
         for event in data.get("_embedded", {}).get("events", [])[:limit]:
-            # Parse start time and date
-            start_time = event.get("dates", {}).get("start", {}).get("localDateTime", "")
+            # Parse start time and date - Ticketmaster has multiple date formats
+            dates = event.get("dates", {}).get("start", {})
+            start_time = dates.get("localDateTime", "") or dates.get("dateTime", "")
+            local_date = dates.get("localDate", "") or dates.get("date", "")
             time_str = None
             date_str = None
+            
+            # Debug: Log what we're working with
+            if not start_time and local_date:
+                print(f"[DEBUG] Ticketmaster event has localDate but no localDateTime: {event.get('name', 'Unknown')[:50]}")
+                print(f"  localDate: {local_date}, dates keys: {list(dates.keys())}")
+            
             if start_time:
                 try:
-                    dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    # Handle different Ticketmaster date formats
+                    # Format 1: "2024-01-15T19:00:00" (localDateTime)
+                    # Format 2: "2024-01-15T19:00:00Z" (dateTime with Z)
+                    # Format 3: "2024-01-15T19:00:00-08:00" (with timezone)
+                    clean_time = start_time.replace("Z", "+00:00")
+                    if "+" not in clean_time and "-" in clean_time[10:]:
+                        # Has timezone offset already
+                        dt = datetime.fromisoformat(clean_time)
+                    else:
+                        # No timezone, assume local
+                        dt = datetime.fromisoformat(clean_time)
+                    
+                    # Format time as "7 PM" (portable across platforms)
                     hour = dt.hour
                     if hour == 0:
                         time_str = "12 AM"
@@ -277,13 +304,60 @@ def _get_ticketmaster_events(
                         time_str = f"{hour - 12} PM"
                     # Format date as "Jan 15, 2024"
                     date_str = dt.strftime("%b %d, %Y")
+                    print(f"[DEBUG] Ticketmaster parsed: {event.get('name', 'Unknown')[:50]} - {date_str} at {time_str}")
                 except Exception as e:
-                    print(f"Error parsing Ticketmaster date/time: {e}, start_time: {start_time}")
-                    # Try to extract time from string if possible
-                    if len(start_time) >= 5:
-                        time_str = start_time[11:16] if len(start_time) > 16 else start_time[:5]
+                    print(f"Error parsing Ticketmaster date/time: {e}")
+                    print(f"  Event: {event.get('name', 'Unknown')}")
+                    print(f"  start_time value: {start_time}")
+                    print(f"  dates object: {dates}")
+                    # Try alternative date field
+                    alt_date = dates.get("localDate", "") or dates.get("date", "")
+                    if alt_date:
+                        try:
+                            date_obj = datetime.strptime(alt_date, "%Y-%m-%d")
+                            date_str = date_obj.strftime("%b %d, %Y")
+                            # Try to get time from timeTBD or timeTBA
+                            if dates.get("timeTBD") or dates.get("timeTBA"):
+                                time_str = "TBD"
+                            else:
+                                time_str = None
+                        except:
+                            time_str = None
+                            date_str = None
                     else:
                         time_str = None
+                        date_str = None
+            elif local_date:
+                # If we have localDate but no localDateTime, at least get the date
+                try:
+                    date_obj = datetime.strptime(local_date, "%Y-%m-%d")
+                    date_str = date_obj.strftime("%b %d, %Y")
+                    # Check if time is TBD/TBA
+                    if dates.get("timeTBD") or dates.get("timeTBA"):
+                        time_str = "TBD"
+                    else:
+                        # Try to get time from localTime if available
+                        local_time = dates.get("localTime", "")
+                        if local_time:
+                            try:
+                                time_obj = datetime.strptime(local_time, "%H:%M:%S")
+                                hour = time_obj.hour
+                                if hour == 0:
+                                    time_str = "12 AM"
+                                elif hour < 12:
+                                    time_str = f"{hour} AM"
+                                elif hour == 12:
+                                    time_str = "12 PM"
+                                else:
+                                    time_str = f"{hour - 12} PM"
+                            except:
+                                time_str = None
+                        else:
+                            time_str = None
+                    print(f"[DEBUG] Ticketmaster used localDate fallback: {event.get('name', 'Unknown')[:50]} - {date_str} at {time_str or 'No time'}")
+                except Exception as e:
+                    print(f"[DEBUG] Error parsing Ticketmaster localDate: {e}, localDate: {local_date}")
+                    time_str = None
                     date_str = None
             
             # Get venue/area
@@ -297,7 +371,7 @@ def _get_ticketmaster_events(
             # Get event URL
             event_url = event.get("url", "") or event.get("_links", {}).get("self", {}).get("href", "")
             
-            events.append({
+            event_data = {
                 "name": event.get("name", "Untitled Event"),
                 "time": time_str,
                 "date": date_str,
@@ -305,7 +379,13 @@ def _get_ticketmaster_events(
                 "type": event_type_name,
                 "url": event_url,
                 "source": "Ticketmaster",
-            })
+            }
+            # Debug: Log if date/time is missing
+            if not date_str or not time_str:
+                print(f"[DEBUG] Ticketmaster event missing date/time: {event_data['name'][:50]}")
+                print(f"  date: {date_str}, time: {time_str}")
+                print(f"  dates object: {dates}")
+            events.append(event_data)
         
         return events
         

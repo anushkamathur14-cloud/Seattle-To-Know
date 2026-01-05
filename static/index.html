@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seattle To Know</title>
+    <!-- Google Maps will be loaded dynamically with API key from backend -->
     <style>
         * {
             margin: 0;
@@ -43,10 +44,16 @@
 
         .card {
             background: white;
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
         }
 
         .weather-card {
@@ -329,12 +336,55 @@
             gap: 15px;
         }
 
+        .food-list {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            max-width: 100%;
+        }
+
+        .food-map-container {
+            width: 100%;
+            height: 600px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            background: #f0f0f0;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .food-map-container:hover {
+            box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+        }
+
+        #food-map {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            border-radius: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .food-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .food-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
         .food-item, .event-card, .activity-card {
-            padding: 20px;
+            padding: 15px;
             background: #f8f9fa;
             border-radius: 8px;
             border-left: 4px solid #667eea;
             transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .food-item {
+            padding: 12px 15px;
         }
 
         .food-item:hover, .event-card:hover, .activity-card:hover {
@@ -343,10 +393,15 @@
         }
 
         .item-name {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .food-item .item-name {
+            font-size: 1rem;
+            margin-bottom: 5px;
         }
 
         .item-details {
@@ -356,6 +411,12 @@
             font-size: 0.9rem;
             color: #666;
             margin-bottom: 10px;
+        }
+
+        .food-item .item-details {
+            gap: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
         }
 
         .item-detail {
@@ -372,6 +433,11 @@
             border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 500;
+        }
+
+        .food-item .link-btn {
+            font-size: 0.85rem;
+            padding: 6px 12px;
         }
 
         .link-btn {
@@ -488,8 +554,7 @@
         let cachedAirQuality = null;
         let selectedEventType = null;
         let selectedTimeRange = 'today';
-        let selectedArea = null;
-        let selectedCuisine = null;
+        let selectedLocations = []; // Array to hold multiple selected locations
         let selectedPriceRange = null;
         let selectedActivityType = null;
 
@@ -728,8 +793,6 @@
             
             try {
                 const params = new URLSearchParams();
-                if (selectedArea) params.append('area', selectedArea);
-                if (selectedCuisine) params.append('cuisine', selectedCuisine);
                 if (selectedPriceRange) params.append('price_range', selectedPriceRange);
                 
                 const response = await fetch(`/api/food?${params.toString()}`);
@@ -747,26 +810,6 @@
                 ${displayWeatherOverview(data.weather, data.air_quality)}
                 
                 <div class="filter-section">
-                    <h3>Filter by Area</h3>
-                    <div class="button-group">
-                        <button class="btn ${!selectedArea ? 'active' : ''}" data-area="all">All Areas</button>
-                        ${data.areas.map(area => `
-                            <button class="btn ${selectedArea === area ? 'active' : ''}" data-area="${area}">${area}</button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <div class="filter-section">
-                    <h3>Filter by Cuisine</h3>
-                    <div class="button-group">
-                        <button class="btn ${!selectedCuisine ? 'active' : ''}" data-cuisine="all">All Cuisines</button>
-                        ${data.cuisines.map(cuisine => `
-                            <button class="btn ${selectedCuisine === cuisine ? 'active' : ''}" data-cuisine="${cuisine}">${cuisine}</button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <div class="filter-section">
                     <h3>Filter by Price Range</h3>
                     <div class="button-group">
                         <button class="btn ${!selectedPriceRange ? 'active' : ''}" data-price="all">All Prices</button>
@@ -776,51 +819,52 @@
                     </div>
                 </div>
 
-                <div class="food-list">
-                    ${data.food_joints.length > 0 ? data.food_joints.map(joint => `
-                        <div class="food-item">
-                            <div class="item-name">
-                                ${joint.name} 
-                                <span style="color: #28a745; font-weight: 600;">${joint.price_range}</span>
-                                ${joint.rating ? `<span style="color: #ffc107; font-size: 0.9rem; margin-left: 8px;">⭐ ${joint.rating.toFixed(1)}</span>` : ''}
-                            </div>
-                            <div class="item-details">
-                                <div class="item-detail">📍 ${joint.area}</div>
-                                <span class="item-type">${joint.cuisine}</span>
-                            </div>
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">${joint.address}</div>
-                            <a href="${joint.google_maps_link}" target="_blank" class="link-btn">📍 Open in Google Maps</a>
+                <div class="food-map-container">
+                    <div id="food-map" class="skeleton-map">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🗺️</div>
+                            <div>Loading map...</div>
                         </div>
-                    `).join('') : `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🍽️</div>
-                            <p>No restaurants found for the selected filters.</p>
-                        </div>
-                    `}
+                    </div>
                 </div>
             `;
             
             document.getElementById('food-tab').innerHTML = html;
             
-            // Add event listeners for area buttons
-            document.querySelectorAll('#food-tab .btn[data-area]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('#food-tab .btn[data-area]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    selectedArea = btn.dataset.area === 'all' ? null : btn.dataset.area;
-                    loadFood();
-                });
-            });
+            // Always initialize map, even if no restaurants
+            const restaurants = data.food_joints || [];
+            console.log('Restaurants data:', restaurants.length);
             
-            // Add event listeners for cuisine buttons
-            document.querySelectorAll('#food-tab .btn[data-cuisine]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('#food-tab .btn[data-cuisine]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    selectedCuisine = btn.dataset.cuisine === 'all' ? null : btn.dataset.cuisine;
-                    loadFood();
-                });
-            });
+            // Load Google Maps API if not already loaded, then initialize map
+            if (!window.google || !window.google.maps) {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${data.google_maps_api_key || ''}&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                script.onload = () => {
+                    console.log('Google Maps API loaded');
+                    // Initialize map immediately for faster UX
+                    setTimeout(() => {
+                        console.log('Initializing map with', restaurants.length, 'restaurants');
+                        initializeFoodMap(restaurants);
+                    }, 100);
+                };
+                script.onerror = () => {
+                    console.error('Failed to load Google Maps API');
+                    const mapElement = document.getElementById('food-map');
+                    if (mapElement) {
+                        mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Failed to load map. Please check your Google Maps API key.</div>';
+                    }
+                };
+                document.head.appendChild(script);
+            } else {
+                // Google Maps already loaded, initialize map immediately
+                console.log('Google Maps already loaded');
+                setTimeout(() => {
+                    console.log('Initializing map with', restaurants.length, 'restaurants');
+                    initializeFoodMap(restaurants);
+                }, 100);
+            }
             
             // Add event listeners for price range buttons
             document.querySelectorAll('#food-tab .btn[data-price]').forEach(btn => {
@@ -833,6 +877,173 @@
             });
         }
 
+        let foodMap = null;
+        let foodMarkers = [];
+
+        function initializeFoodMap(restaurants) {
+            const mapElement = document.getElementById('food-map');
+            if (!mapElement) {
+                console.error('Map element not found');
+                return;
+            }
+            
+            if (!window.google || !window.google.maps) {
+                console.error('Google Maps API not loaded');
+                mapElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Google Maps API not loaded. Please refresh the page.</div>';
+                return;
+            }
+            
+            // Center map on Seattle
+            const seattleCenter = { lat: 47.6062, lng: -122.3321 };
+            
+            try {
+                // Remove skeleton and clear loading message
+                mapElement.classList.remove('skeleton-map');
+                mapElement.innerHTML = '';
+                
+                // Initialize map with smooth appearance
+                foodMap = new google.maps.Map(mapElement, {
+                    zoom: 12,
+                    center: seattleCenter,
+                    mapTypeId: 'roadmap',
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ],
+                    disableDefaultUI: false,
+                    zoomControl: true,
+                    mapTypeControl: false,
+                    scaleControl: true,
+                    streetViewControl: false,
+                    rotateControl: false,
+                    fullscreenControl: true
+                });
+                
+                // Add fade-in effect
+                mapElement.classList.add('fade-in');
+                console.log('Map initialized successfully');
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                mapElement.innerHTML = `<div style="padding: 20px; text-align: center; color: #dc3545;">Error initializing map: ${error.message}</div>`;
+                return;
+            }
+
+            // Place type color mapping (3 simple classifications)
+            const placeTypeColors = {
+                'Cafe': '#8B4513',
+                'Bar': '#9B59B6',
+                'Restaurant': '#667eea'
+            };
+
+            // Place type icons
+            const placeTypeIcons = {
+                'Cafe': '☕',
+                'Bar': '🍺',
+                'Restaurant': '🍽️'
+            };
+
+            // Clear existing markers
+            foodMarkers.forEach(marker => marker.setMap(null));
+            foodMarkers = [];
+
+            // Create markers for each place, color-coded by type
+            if (!restaurants || restaurants.length === 0) {
+                console.log('No places to display on map');
+                return;
+            }
+            
+            restaurants.forEach(restaurant => {
+                if (!restaurant.lat || !restaurant.lng) {
+                    console.warn('Place missing coordinates:', restaurant.name);
+                    return;
+                }
+
+                const placeType = restaurant.cuisine || 'Restaurant';
+                const color = placeTypeColors[placeType] || '#667eea';
+                const icon = placeTypeIcons[placeType] || '🍽️';
+
+                // Create custom marker with cuisine color
+                const marker = new google.maps.Marker({
+                    position: { lat: restaurant.lat, lng: restaurant.lng },
+                    map: foodMap,
+                    title: restaurant.name,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: color,
+                        fillOpacity: 0.8,
+                        strokeColor: '#FFFFFF',
+                        strokeWeight: 2
+                    },
+                    label: {
+                        text: icon,
+                        fontSize: '14px'
+                    }
+                });
+
+                // Create info window content with better styling
+                const infoContent = `
+                    <div style="padding: 0; min-width: 280px; max-width: 320px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        ${restaurant.photo_url ? `
+                            <img src="${restaurant.photo_url}" alt="${restaurant.name}" 
+                                 style="width: 100%; height: 180px; object-fit: cover; display: block; background: #f0f0f0;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.borderRadius='12px 12px 0 0';" />
+                        ` : ''}
+                        <div style="padding: 16px; background: white;">
+                            <h3 style="margin: 0 0 10px 0; font-size: 1.2rem; color: #333; font-weight: 600; line-height: 1.3;">${restaurant.name}</h3>
+                            <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                <span style="background: ${color}; color: white; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.3px;">${placeType}</span>
+                                <span style="color: #28a745; font-weight: 600; font-size: 0.9rem;">${restaurant.price_range}</span>
+                                ${restaurant.rating ? `<span style="color: #ffc107; font-size: 0.9rem; font-weight: 600;">⭐ ${restaurant.rating.toFixed(1)}</span>` : ''}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                                <span>📍</span> <span>${restaurant.area || 'Seattle'}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 12px; line-height: 1.5;">${restaurant.address}</div>
+                            <a href="${restaurant.google_maps_link}" target="_blank" 
+                               style="display: block; padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; text-align: center; font-weight: 500; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)';">
+                                📍 Open in Google Maps
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: infoContent
+                });
+
+                marker.addListener('click', () => {
+                    // Close all other info windows
+                    foodMarkers.forEach(m => {
+                        if (m.infoWindow) m.infoWindow.close();
+                    });
+                    infoWindow.open(foodMap, marker);
+                    marker.infoWindow = infoWindow;
+                });
+
+                foodMarkers.push(marker);
+            });
+
+            // Fit map to show all markers
+            if (foodMarkers.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                foodMarkers.forEach(marker => {
+                    bounds.extend(marker.getPosition());
+                });
+                foodMap.fitBounds(bounds);
+                
+                // Don't zoom in too much if there are many markers
+                if (foodMap.getZoom() > 14) {
+                    foodMap.setZoom(14);
+                }
+            }
+        }
+
         async function loadEvents() {
             const tab = document.getElementById('events-tab');
             tab.innerHTML = '<div class="loading">Loading events...</div>';
@@ -841,6 +1052,9 @@
                 const params = new URLSearchParams();
                 if (selectedEventType) params.append('event_type', selectedEventType);
                 params.append('time_range', selectedTimeRange);
+                if (selectedLocations.length > 0) {
+                    params.append('locations', selectedLocations.join(','));
+                }
                 params.append('event_limit', '20');
                 
                 const response = await fetch(`/api/events?${params.toString()}`);
@@ -859,7 +1073,18 @@
                 
                 <div class="time-range-toggle">
                     <button class="time-range-btn ${selectedTimeRange === 'today' ? 'active' : ''}" data-range="today">Today</button>
+                    <button class="time-range-btn ${selectedTimeRange === 'tomorrow' ? 'active' : ''}" data-range="tomorrow">Tomorrow</button>
                     <button class="time-range-btn ${selectedTimeRange === 'week' ? 'active' : ''}" data-range="week">This Week</button>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Location</h3>
+                    <div class="button-group">
+                        <button class="btn ${selectedLocations.length === 0 ? 'active' : ''}" data-location="all">All Locations</button>
+                        ${data.locations && data.locations.length > 0 ? data.locations.map(location => `
+                            <button class="btn ${selectedLocations.includes(location) ? 'active' : ''}" data-location="${location}">📍 ${location}</button>
+                        `).join('') : '<div style="color: #666; font-size: 0.9rem; padding: 10px;">Loading locations...</div>'}
+                    </div>
                 </div>
 
                 <div class="filter-section">
@@ -914,6 +1139,41 @@
                     document.querySelectorAll('#events-tab .btn[data-type]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     selectedEventType = btn.dataset.type === 'all' ? null : btn.dataset.type;
+                    loadEvents();
+                });
+            });
+            
+            // Add event listeners for location filters (multi-select)
+            document.querySelectorAll('#events-tab .btn[data-location]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const location = btn.dataset.location;
+                    if (location === 'all') {
+                        // Clear all selections
+                        selectedLocations = [];
+                        document.querySelectorAll('#events-tab .btn[data-location]').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    } else {
+                        // Toggle location selection (multi-select enabled)
+                        const index = selectedLocations.indexOf(location);
+                        if (index > -1) {
+                            // Remove from selection
+                            selectedLocations.splice(index, 1);
+                            btn.classList.remove('active');
+                        } else {
+                            // Add to selection (allows multiple)
+                            selectedLocations.push(location);
+                            btn.classList.add('active');
+                        }
+                        // Update "All Locations" button
+                        const allBtn = document.querySelector('#events-tab .btn[data-location="all"]');
+                        if (allBtn) {
+                            if (selectedLocations.length === 0) {
+                                allBtn.classList.add('active');
+                            } else {
+                                allBtn.classList.remove('active');
+                            }
+                        }
+                    }
                     loadEvents();
                 });
             });

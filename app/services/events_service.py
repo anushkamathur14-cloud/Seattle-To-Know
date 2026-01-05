@@ -28,6 +28,7 @@ def get_seattle_events(
     event_type: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    locations: Optional[List[str]] = None,
     limit: int = 10
 ) -> List[dict]:
     """
@@ -38,6 +39,7 @@ def get_seattle_events(
         event_type: Filter by event type (e.g., "music", "food", "sports", "tech", "arts")
         start_date: Start date for event search (defaults to today)
         end_date: End date for event search (defaults to tomorrow)
+        locations: List of location names to filter by (e.g., ["Downtown", "Capitol Hill"])
         limit: Maximum number of events to return (default: 10)
     
     Returns:
@@ -73,11 +75,17 @@ def get_seattle_events(
     if event_type:
         unique_events = _filter_events_by_type(unique_events, event_type)
     
+    # Apply location filter if specified
+    if locations:
+        unique_events = _filter_events_by_locations(unique_events, locations)
+    
     # If no events found from APIs, return filtered placeholders
     if not unique_events:
         placeholder_events = _get_placeholder_events(limit * 2)  # Get more to filter
         if event_type:
             placeholder_events = _filter_events_by_type(placeholder_events, event_type)
+        if locations:
+            placeholder_events = _filter_events_by_locations(placeholder_events, locations)
         return placeholder_events[:limit]
     
     return unique_events[:limit]
@@ -562,6 +570,58 @@ def _filter_events_by_type(events: List[dict], event_type: str) -> List[dict]:
                 if match_term in event_name:
                     matches = True
                     break
+        
+        if matches:
+            filtered_events.append(event)
+    
+    return filtered_events
+
+
+def _filter_events_by_locations(events: List[dict], locations: List[str]) -> List[dict]:
+    """
+    Filter events by location/area. Case-insensitive matching with fuzzy matching.
+    Allows multiple locations to be selected.
+    """
+    if not locations or not events:
+        return events
+    
+    # Normalize location names for matching
+    locations_normalized = [loc.lower().strip() for loc in locations]
+    
+    filtered_events = []
+    
+    for event in events:
+        event_area = event.get("area", "").lower().strip() if event.get("area") else ""
+        
+        # Check if event area matches any of the selected locations
+        matches = False
+        for location in locations_normalized:
+            # Exact match
+            if event_area == location:
+                matches = True
+                break
+            # Partial match (e.g., "Capitol Hill" matches "Capitol")
+            if location in event_area or event_area in location:
+                matches = True
+                break
+            # Handle common variations
+            location_variations = {
+                "downtown": ["downtown seattle", "seattle downtown", "downtown"],
+                "capitol hill": ["capitol hill", "capitol"],
+                "queen anne": ["queen anne", "lower queen anne", "upper queen anne"],
+                "ballard": ["ballard"],
+                "fremont": ["fremont"],
+                "west seattle": ["west seattle", "alki"],
+                "sodo": ["sodo", "so-do", "stadium district"],
+                "pioneer square": ["pioneer square", "pioneer"],
+            }
+            for key, variations in location_variations.items():
+                if location in key or key in location:
+                    if any(var in event_area for var in variations):
+                        matches = True
+                        break
+            if matches:
+                break
         
         if matches:
             filtered_events.append(event)

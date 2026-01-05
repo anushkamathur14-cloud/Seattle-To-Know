@@ -88,34 +88,37 @@ def get_overview():
 
 @router.get("/food")
 def get_food(
-    area: Optional[str] = Query(None, description="Filter by area"),
-    cuisine: Optional[str] = Query(None, description="Filter by cuisine type"),
     price_range: Optional[str] = Query(None, description="Filter by price range ($, $$, $$$, $$$$)")
 ):
     """Get food joints with Google Maps links."""
     weather = _get_cached_weather()
     air_quality = _get_cached_air_quality()
-    food_joints = get_seattle_food_joints(area=area, cuisine=cuisine, price_range=price_range)
-    areas = get_food_areas()
-    cuisines = get_food_cuisines()
+    
+    # Get the filtered food joints (price range filter only)
+    food_joints = get_seattle_food_joints(area=None, cuisine=None, price_range=price_range)
+    
     price_ranges = get_price_ranges()
+    
+    # Get Google Maps API key for frontend (same key used for Places API)
+    import os
+    google_maps_key = os.getenv("GOOGLE_PLACES_API_KEY", "")
     
     return {
         "weather": weather,
         "air_quality": air_quality,
         "food_joints": food_joints,
-        "areas": areas,
-        "cuisines": cuisines,
         "price_ranges": price_ranges,
+        "google_maps_api_key": google_maps_key,
     }
 
 @router.get("/events")
 def get_events(
     event_type: Optional[str] = Query(None, description="Filter by event type"),
-    time_range: str = Query("today", description="Time range: 'today' or 'week'"),
+    time_range: str = Query("today", description="Time range: 'today', 'tomorrow', or 'week'"),
+    locations: Optional[str] = Query(None, description="Comma-separated list of locations to filter by"),
     event_limit: int = Query(20, ge=1, le=50)
 ):
-    """Get events for today or this week."""
+    """Get events for today, tomorrow, or this week."""
     weather = _get_cached_weather()
     air_quality = _get_cached_air_quality()
     
@@ -124,14 +127,36 @@ def get_events(
     if time_range == "week":
         start_date = today
         end_date = today + timedelta(days=7)
-    else:  # today
+    elif time_range == "tomorrow":
+        start_date = today + timedelta(days=1)
+        end_date = today + timedelta(days=1)
+    else:  # today (default)
         start_date = today
         end_date = today
     
+    # Parse locations if provided
+    location_list = None
+    if locations:
+        location_list = [loc.strip() for loc in locations.split(",") if loc.strip()]
+    
+    # First, get all events WITHOUT location filtering to get the full list of available locations
+    all_events_for_locations = get_seattle_events(
+        event_type=event_type,
+        start_date=start_date,
+        end_date=end_date,
+        locations=None,  # Don't filter by location yet
+        limit=event_limit * 3  # Get more events to have a better location list
+    )
+    
+    # Get unique locations from ALL events (before location filtering) for filter options
+    unique_locations = sorted(list(set([event.get("area", "Seattle") for event in all_events_for_locations if event.get("area")])))
+    
+    # Now get the filtered events with location filtering applied
     events = get_seattle_events(
         event_type=event_type,
         start_date=start_date,
         end_date=end_date,
+        locations=location_list,
         limit=event_limit
     )
     
@@ -139,6 +164,7 @@ def get_events(
         "weather": weather,
         "air_quality": air_quality,
         "events": events,
+        "locations": unique_locations,
         "time_range": time_range,
     }
 

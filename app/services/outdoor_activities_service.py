@@ -22,8 +22,8 @@ def get_seattle_outdoor_activities() -> List[Dict]:
             "type": "Tennis",
             "location": "Green Lake",
             "address": "5900 W Green Lake Way N, Seattle, WA 98103",
-            "rules_link": "https://www.usta.com/en/home/play/tennis-rules.html",
-            "tutorial_link": "https://www.youtube.com/results?search_query=tennis+tutorial+for+beginners",
+            "rules_link": "https://www.itftennis.com/en/about-us/rules-regulations/rules-of-tennis/",
+            "tutorial_link": None,
             "google_maps_link": "https://www.google.com/maps/search/?api=1&query=Lower+Woodland+Tennis+Seattle"
         },
         {
@@ -58,8 +58,8 @@ def get_seattle_outdoor_activities() -> List[Dict]:
             "type": "Tennis",
             "location": "Seward Park",
             "address": "5900 Lake Washington Blvd S, Seattle, WA 98118",
-            "rules_link": "https://www.usta.com/en/home/play/tennis-rules.html",
-            "tutorial_link": "https://www.youtube.com/results?search_query=tennis+tutorial+for+beginners",
+            "rules_link": "https://www.itftennis.com/en/about-us/rules-regulations/rules-of-tennis/",
+            "tutorial_link": None,
             "google_maps_link": "https://www.google.com/maps/search/?api=1&query=Seward+Park+Tennis+Seattle"
         },
         {
@@ -85,8 +85,8 @@ def get_seattle_outdoor_activities() -> List[Dict]:
             "type": "Tennis",
             "location": "Capitol Hill",
             "address": "1247 15th Ave E, Seattle, WA 98112",
-            "rules_link": "https://www.usta.com/en/home/play/tennis-rules.html",
-            "tutorial_link": "https://www.youtube.com/results?search_query=tennis+tutorial+for+beginners",
+            "rules_link": "https://www.itftennis.com/en/about-us/rules-regulations/rules-of-tennis/",
+            "tutorial_link": None,
             "google_maps_link": "https://www.google.com/maps/search/?api=1&query=Volunteer+Park+Tennis+Seattle"
         },
         {

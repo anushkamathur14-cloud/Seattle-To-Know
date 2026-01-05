@@ -50,28 +50,51 @@ def get_weather_forecast_next_hours(hours: int = 3) -> Dict:
         }
     
     try:
-        # OpenWeatherMap Forecast API (3-hour intervals)
+        # Get current time
+        now = datetime.now()
+        target_time = now + timedelta(hours=hours)
+        
+        # OpenWeatherMap Forecast API (3-hour intervals, but we'll filter for next 2-3 hours)
         url = "https://api.openweathermap.org/data/2.5/forecast"
         params = {
             "lat": SEATTLE_LAT,
             "lon": SEATTLE_LON,
             "appid": OPENWEATHER_API_KEY,
             "units": "metric",
-            "cnt": 2,  # Get next 2 forecasts (6 hours)
+            "cnt": 40,  # Get more forecasts to find the right ones
         }
         
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         
-        # Get next 2-3 hours of forecasts
-        forecasts = data.get("list", [])[:2]  # Next 2 forecast periods (6 hours)
+        # Filter forecasts to only include those within the next 2-3 hours
+        all_forecasts = data.get("list", [])
+        relevant_forecasts = []
+        
+        for forecast in all_forecasts:
+            forecast_time = datetime.fromtimestamp(forecast.get("dt", 0))
+            # Only include forecasts within the next 'hours' hours
+            if now <= forecast_time <= target_time:
+                relevant_forecasts.append(forecast)
+            # Stop if we've gone past our target time
+            if forecast_time > target_time:
+                break
+        
+        # If we don't have enough forecasts, take the first 2 that are after now
+        if len(relevant_forecasts) == 0:
+            for forecast in all_forecasts:
+                forecast_time = datetime.fromtimestamp(forecast.get("dt", 0))
+                if forecast_time > now:
+                    relevant_forecasts.append(forecast)
+                    if len(relevant_forecasts) >= 2:
+                        break
         
         will_rain = False
         rain_probability = 0
         forecast_details = []
         
-        for forecast in forecasts:
+        for forecast in relevant_forecasts:
             # Check for rain
             rain = forecast.get("rain", {})
             pop = forecast.get("pop", 0)  # Probability of precipitation (0-1)
@@ -81,8 +104,17 @@ def get_weather_forecast_next_hours(hours: int = 3) -> Dict:
                 rain_probability = max(rain_probability, int(pop * 100))
             
             # Get forecast time
-            dt = datetime.fromtimestamp(forecast.get("dt", 0))
-            time_str = dt.strftime("%I %p")
+            forecast_time = datetime.fromtimestamp(forecast.get("dt", 0))
+            # Format time correctly (remove leading zero, show AM/PM)
+            hour = forecast_time.hour
+            if hour == 0:
+                time_str = "12 AM"
+            elif hour < 12:
+                time_str = f"{hour} AM"
+            elif hour == 12:
+                time_str = "12 PM"
+            else:
+                time_str = f"{hour - 12} PM"
             
             # Get weather condition
             weather = forecast.get("weather", [{}])[0]
